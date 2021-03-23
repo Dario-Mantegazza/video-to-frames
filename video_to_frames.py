@@ -9,89 +9,84 @@ class VideoToFramesConverter:
     def __init__(self, input_path: str, output_path: str, final_resolution_x: int = None,
                  final_resolution_y: int = None):
         """
-
-        :param input_path:
-        :param output_path:
-        :param final_resolution_x:
-        :param final_resolution_y:
+        Init of the class
+        :param input_path:path of the folder containing the files or path of the file
+        :param output_path: path of the output folder
+        :param final_resolution_x: optional, use it if you want to resize the video
+        :param final_resolution_y: optional, use it if you want to resize the video
         """
-        assert type(final_resolution_x) is int, "final_resolution_x is not an integer: %r" % final_resolution_x
-        assert type(final_resolution_y) is int, "final_resolution_y  is not an integer: %r" % final_resolution_y
+        # assert type(final_resolution_x) is int, "final_resolution_x is not an integer: %r" % final_resolution_x
+        # assert type(final_resolution_y) is int, "final_resolution_y  is not an integer: %r" % final_resolution_y
         assert self._check_folder(input_path), "input path doesn't exists"
-        self.input_path = input_path
-        self.output_path = output_path
-        self.final_resolution = (final_resolution_x, final_resolution_y)
+        self._input_path = input_path
+        self._output_path = output_path
+        self._final_resolution = (final_resolution_x, final_resolution_y)
 
     def convert(self):
         """
-
+        Call for coverting a video
         :return:
         """
-        for video_file in tqdm(glob.glob(self.input_path + "*"), desc="Converting Videos"):
+        for video_file in tqdm(glob.glob(self._input_path + "*"), desc="Converting Videos"):
             filename, _ = os.path.splitext(os.path.basename(video_file))
-            data_path = os.path.join(self.output_path, filename + "/")
+            data_path = os.path.join(self._output_path, filename + "/")
             self._check_create_folder(data_path)
             self._converter_helper(video_file, data_path)
         print("Completed")
 
-    def convert_passed_file(self, video_file: str):
-        """
-
-        :param video_file:
-        :return:
-        """
-        filename, _ = os.path.splitext(os.path.basename(video_file))
-        data_path = os.path.join(self.output_path, filename)
-        self._check_create_folder(data_path)
-        self._converter_helper(video_file, data_path)
-
     def current_settings(self):
         """
-
-        :return:
+        print current settings
+        :return: nothing
         """
-        print(f"{self.input_path=}\n{self.output_path=}\n{self.final_resolution=}")
+        print(f"{self._input_path=}\n{self._output_path=}\n{self._final_resolution=}")
 
     def change_resolution(self, new_resolution_x: int, new_resolution_y: int):
         """
+        change resolution after class init for resizing final frames
+        :param new_resolution_x: final width of the frames
+        :param new_resolution_y: final height of the frames
 
-        :param new_resolution_x:
-        :param new_resolution_y:
-        :return:
         """
         assert type(new_resolution_x) is int, "new_resolution_x is not an integer: %r" % new_resolution_x
-        assert type(new_resolution_y) is int, "new_resolution_y  is not an integer: %r" % new_resolution_y
-        self.final_resolution = (new_resolution_x, new_resolution_y)
+        assert type(new_resolution_y) is int, "new_resolution_y is not an integer: %r" % new_resolution_y
+        self._final_resolution = (new_resolution_x, new_resolution_y)
 
     def change_input_path(self, new_path: str):
         """
-
-        :param new_path:
-        :return:
+        change input path after class init
+        :param new_path: new input path
         """
         assert self._check_folder(new_path), "new input path doesn't exists"
-        self.input_path = new_path
+        self._input_path = new_path
 
     def change_output_path(self, new_path: str):
         """
-
-        :param new_path:
-        :return:
+        change output path after class init
+        :param new_path: new output path
         """
-        self.output_path = new_path
+        self._output_path = new_path
 
     def _converter_helper(self, file: str, subfolder: str):
         vidcap = cv2.VideoCapture(file)
         success, image = vidcap.read()
         count = 0
-        if self.final_resolution[0] is None or self.final_resolution[1] is None:
-            width = vidcap.get(3)
-            height = vidcap.get(4)
+        width = int(vidcap.get(3))
+        height = int(vidcap.get(4))
+        if self._final_resolution[0] is None or self._final_resolution[1] is None:
+            self._final_resolution = (width, height)
         while success:
-            frame = cv2.resize(image, self.final_resolution, fx=0, fy=0, interpolation=cv2.INTER_CUBIC)
-            cv2.imwrite(os.path.join(subfolder, f"{count}".zfill(
-                6) + f"_{self.final_resolution[0]}_{self.final_resolution[1]}.jpg"),
-                        frame)  # save frame as JPEG file
+            if width > self._final_resolution[0]:
+                frame = cv2.resize(image, self._final_resolution, fx=0, fy=0, interpolation=cv2.INTER_CUBIC)
+            else:
+                frame = image
+
+            cv2.imwrite(
+                os.path.join(
+                    subfolder,
+                    f"{count}".zfill(6) +
+                    f"_{self._final_resolution[0]}_{self._final_resolution[1]}.jpg"),
+                frame)  # save frame as JPEG file
             success, image = vidcap.read()
             count += 1
 
